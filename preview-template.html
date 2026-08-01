@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Carousel preview</title>
+<style>
+  /* ---- Fixed, do-not-touch preview chrome. Only edit the .slide blocks below. ---- */
+  *{margin:0;box-sizing:border-box}
+  body{background:#0b0b0f;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       font-family:system-ui,-apple-system,sans-serif;padding:24px;-webkit-user-select:none;user-select:none}
+  .ig-frame{width:420px;background:#000;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);color:#fff}
+  .ig-header{display:flex;align-items:center;gap:10px;padding:12px 14px}
+  .ig-avatar{width:34px;height:34px;border-radius:50%;background:#334155;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .ig-handle{font-size:14px;font-weight:600}
+  .ig-sub{font-size:11px;color:#9aa0a6}
+  /* viewport is the 3:4 window; NEVER change 420x560 (export depends on it) */
+  .carousel-viewport{width:420px;height:560px;overflow:hidden;position:relative;cursor:grab;touch-action:pan-y}
+  .carousel-viewport:active{cursor:grabbing}
+  .carousel-track{display:flex;height:560px;transition:transform .28s ease}
+  .slide{flex:0 0 420px;width:420px;height:560px;overflow:hidden}
+  .nav-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:38px;height:38px;border:none;border-radius:50%;
+           background:rgba(0,0,0,.45);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .nav-btn:disabled{opacity:.25;cursor:default}
+  .nav-btn.prev{left:8px}.nav-btn.next{right:8px}
+  .dots{display:flex;gap:6px;justify-content:center;padding:12px 0 6px}
+  .dot{width:6px;height:6px;border-radius:50%;background:#3a3a3f;cursor:pointer;transition:background .2s}
+  .dot.active{background:#0095f6}
+  .ig-actions{display:flex;gap:16px;padding:6px 14px 2px;font-size:22px}
+  .ig-caption{padding:4px 14px 16px;font-size:13px;line-height:1.4}
+  .ig-caption b{font-weight:600}
+  .ig-time{color:#9aa0a6;font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:0 14px 12px}
+</style>
+</head>
+<body>
+  <div class="ig-frame">
+    <div class="ig-header">
+      <div class="ig-avatar">A</div>
+      <div>
+        <div class="ig-handle">yourhandle</div>
+        <div class="ig-sub">Original audio</div>
+      </div>
+    </div>
+
+    <div class="carousel-viewport" id="viewport">
+      <button class="nav-btn prev" id="prev" aria-label="Previous">&#8249;</button>
+      <button class="nav-btn next" id="next" aria-label="Next">&#8250;</button>
+      <div class="carousel-track" id="track">
+        <!-- ===== SLIDES: replace these .slide blocks with your real slides ===== -->
+        <div class="slide" style="background:#334155;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800;color:#fff">1</div>
+        <div class="slide" style="background:#475569;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800;color:#fff">2</div>
+        <div class="slide" style="background:#64748b;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800;color:#fff">3</div>
+        <!-- ===== end slides ===== -->
+      </div>
+    </div>
+
+    <div class="dots" id="dots"></div>
+    <div class="ig-actions"><span>&#9825;</span><span>&#128172;</span><span>&#9993;</span><span style="margin-left:auto">&#128278;</span></div>
+    <div class="ig-caption"><b>yourhandle</b> Comment a keyword and I will DM you the resource.</div>
+    <div class="ig-time">2 hours ago</div>
+  </div>
+
+<script>
+/* ---- Fixed navigation logic. Works with any number of .slide elements. ---- */
+(function () {
+  const W = 420;
+  const track = document.getElementById('track');
+  const slides = track.querySelectorAll('.slide');
+  const n = slides.length;
+  const prev = document.getElementById('prev');
+  const next = document.getElementById('next');
+  const dotsWrap = document.getElementById('dots');
+  const vp = document.getElementById('viewport');
+  let idx = 0;
+
+  for (let i = 0; i < n; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => go(i));
+    dotsWrap.appendChild(d);
+  }
+  const dots = dotsWrap.querySelectorAll('.dot');
+
+  function go(i) {
+    idx = Math.max(0, Math.min(n - 1, i));
+    track.style.transition = 'transform .28s ease';
+    track.style.transform = 'translateX(' + (-idx * W) + 'px)';
+    dots.forEach((d, k) => d.classList.toggle('active', k === idx));
+    prev.disabled = idx === 0;
+    next.disabled = idx === n - 1;
+  }
+
+  prev.addEventListener('click', () => go(idx - 1));
+  next.addEventListener('click', () => go(idx + 1));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') go(idx - 1);
+    else if (e.key === 'ArrowRight') go(idx + 1);
+  });
+
+  // pointer drag / swipe
+  let startX = 0, dragging = false;
+  vp.addEventListener('pointerdown', (e) => { dragging = true; startX = e.clientX; track.style.transition = 'none'; vp.setPointerCapture(e.pointerId); });
+  vp.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    track.style.transform = 'translateX(' + (-idx * W + dx) + 'px)';
+  });
+  function endDrag(e) {
+    if (!dragging) return;
+    dragging = false;
+    const dx = e.clientX - startX;
+    if (dx < -50) go(idx + 1);
+    else if (dx > 50) go(idx - 1);
+    else go(idx);
+  }
+  vp.addEventListener('pointerup', endDrag);
+  vp.addEventListener('pointercancel', endDrag);
+
+  go(0);
+})();
+</script>
+</body>
+</html>
